@@ -6,9 +6,16 @@ import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 
 @ControllerAdvice
 class GlobalExceptionHandler {
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleMaxUploadSizeExceeded(ex: MaxUploadSizeExceededException): ResponseEntity<Map<String, String>> {
+        val error = mapOf("error" to "Image size exceeds maximum allowed size of 1.5 MB")
+        return ResponseEntity(error, HttpStatus.PAYLOAD_TOO_LARGE)
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidationExceptions(ex: MethodArgumentNotValidException): ResponseEntity<Map<String, String>> {
         val errors = mutableMapOf<String, String>()
