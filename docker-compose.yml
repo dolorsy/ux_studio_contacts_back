@@ -8,15 +8,17 @@ services:
       - "8080:8080"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:sqlite:/data/contacts.db
-      - MINIO_ENDPOINT=http://rustfs:9000
-      - MINIO_PUBLIC_URL=http://localhost:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET_NAME=contacts-images
+      - S3_ENDPOINT=http://rustfs:9000
+      - S3_PUBLIC_URL=http://localhost:9000
+      - S3_ACCESS_KEY=rustfs
+      - S3_SECRET_KEY=rustfs
+      - S3_BUCKET_NAME=contacts-images
+      - S3_REGION=us-east-1
     volumes:
-      - sqlite-data_2:/data
+      - sqlite-data_3:/data
     depends_on:
-      - rustfs
+      rustfs:
+        condition: service_started
     networks:
       - contacts-network
 
@@ -27,21 +29,22 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - RUSTFS_ACCESS_KEY=minioadmin
-      - RUSTFS_SECRET_KEY=minioadmin
+      - RUSTFS_ACCESS_KEY=rustfs
+      - RUSTFS_SECRET_KEY=rustfs
     volumes:
       - rustfs-data:/data
       - rustfs-logs:/logs
     networks:
       - contacts-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      test: ["CMD-SHELL", "nc -z localhost 9000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
-  sqlite-data_2:
+  sqlite-data_3:
   rustfs-data:
   rustfs-logs:
 
