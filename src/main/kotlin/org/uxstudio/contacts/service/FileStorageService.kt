@@ -10,7 +10,9 @@ import java.io.InputStream
 class FileStorageService(
     private val minioClient: MinioClient,
     @Value("\${minio.bucket-name}")
-    private val bucketName: String
+    private val bucketName: String,
+    @Value("\${minio.public-url}")
+    private val publicUrl: String
 ) {
     fun initializeBucket() {
         try {
@@ -26,6 +28,28 @@ class FileStorageService(
                         .build()
                 )
             }
+            
+            // Set bucket policy to allow public read access
+            val publicReadPolicy = """
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {"AWS": ["*"]},
+                            "Action": ["s3:GetObject"],
+                            "Resource": ["arn:aws:s3:::${bucketName}/*"]
+                        }
+                    ]
+                }
+            """.trimIndent()
+            
+            minioClient.setBucketPolicy(
+                SetBucketPolicyArgs.builder()
+                    .bucket(bucketName)
+                    .config(publicReadPolicy)
+                    .build()
+            )
         } catch (e: Exception) {
             throw RuntimeException("Error initializing MinIO bucket", e)
         }
@@ -103,6 +127,34 @@ class FileStorageService(
             )
         } catch (e: Exception) {
             throw RuntimeException("Error deleting file from MinIO", e)
+        }
+    }
+    
+    fun getPublicUrl(fileName: String?): String? {
+        return fileName?.let {
+            // If it's already a full URL, return it as is
+            if (it.startsWith("http://") || it.startsWith("https://")) {
+                return it
+            }
+            // Otherwise, convert object path to public URL
+            // Remove leading slash if present
+            println(publicUrl)
+            val cleanFileName = it.removePrefix("/")
+            "$publicUrl/$bucketName/$cleanFileName"
+        }
+    }
+    
+    fun extractObjectPath(pictureValue: String?): String? {
+        return pictureValue?.let {
+            // If it's a URL, extract the object path
+            if (it.startsWith("http://") || it.startsWith("https://")) {
+                // Extract path after bucket name: http://host:port/bucket-name/path -> path
+                val pathAfterBucket = it.substringAfter("/$bucketName/", "")
+                if (pathAfterBucket.isNotEmpty()) pathAfterBucket else it.substringAfterLast("/", it)
+            } else {
+                // Already an object path
+                it
+            }
         }
     }
 }

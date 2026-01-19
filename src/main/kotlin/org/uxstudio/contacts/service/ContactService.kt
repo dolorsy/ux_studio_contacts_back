@@ -23,18 +23,29 @@ class ContactService(
         // Handle picture upload
         if (pictureFile != null && !pictureFile.isEmpty) {
             val fileName = generateFileName(pictureFile.originalFilename ?: "picture")
-            contact.picture = fileStorageService.uploadFile(fileName, pictureFile)
+            fileStorageService.uploadFile(fileName, pictureFile)
+            // Store the object path, not the URL
+            contact.picture = fileName
         }
         
-        return contactRepository.save(contact)
+        val savedContact = contactRepository.save(contact)
+        // Convert to public URL before returning
+        savedContact.picture = fileStorageService.getPublicUrl(savedContact.picture)
+        return savedContact
     }
 
     fun getAllContacts(): List<Contact> {
-        return contactRepository.findAll()
+        return contactRepository.findAll().map { contact ->
+            contact.picture = fileStorageService.getPublicUrl(contact.picture)
+            contact
+        }
     }
 
     fun getContactById(id: Long): java.util.Optional<Contact> {
-        return contactRepository.findById(id)
+        return contactRepository.findById(id).map { contact ->
+            contact.picture = fileStorageService.getPublicUrl(contact.picture)
+            contact
+        }
     }
 
     fun updateContact(id: Long, contactDetails: Contact, pictureFile: MultipartFile?): Contact {
@@ -56,9 +67,10 @@ class ContactService(
         // Handle picture upload/update
         if (pictureFile != null && !pictureFile.isEmpty) {
             // Delete old picture if exists
-            contact.picture?.let { oldPicture ->
+            contact.picture?.let { pictureValue ->
                 try {
-                    fileStorageService.deleteFile(oldPicture)
+                    val objectPath = fileStorageService.extractObjectPath(pictureValue)
+                    objectPath?.let { fileStorageService.deleteFile(it) }
                 } catch (e: Exception) {
                     // Log error but continue with update
                     println("Error deleting old picture: ${e.message}")
@@ -67,10 +79,15 @@ class ContactService(
             
             // Upload new picture
             val fileName = generateFileName(pictureFile.originalFilename ?: "picture")
-            contact.picture = fileStorageService.uploadFile(fileName, pictureFile)
+            fileStorageService.uploadFile(fileName, pictureFile)
+            // Store the object path, not the URL
+            contact.picture = fileName
         }
 
-        return contactRepository.save(contact)
+        val savedContact = contactRepository.save(contact)
+        // Convert to public URL before returning
+        savedContact.picture = fileStorageService.getPublicUrl(savedContact.picture)
+        return savedContact
     }
 
     fun deleteContact(id: Long) {
@@ -78,9 +95,10 @@ class ContactService(
             .orElseThrow { RuntimeException("Contact not found with id: $id") }
         
         // Delete picture from bucket if exists
-        contact.picture?.let { picture ->
+        contact.picture?.let { pictureValue ->
             try {
-                fileStorageService.deleteFile(picture)
+                val objectPath = fileStorageService.extractObjectPath(pictureValue)
+                objectPath?.let { fileStorageService.deleteFile(it) }
             } catch (e: Exception) {
                 // Log error but continue with deletion
                 println("Error deleting picture: ${e.message}")
