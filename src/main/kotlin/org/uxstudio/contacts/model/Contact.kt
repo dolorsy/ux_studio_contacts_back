@@ -27,9 +27,6 @@ class Contact {
     @Column(name = "picture")
     var picture: String? = null
 
-    @Column(name = "is_favourite", nullable = false)
-    var isFavourite: Boolean = false
-
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: LocalDateTime? = null
 

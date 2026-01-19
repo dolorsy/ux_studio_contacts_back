@@ -20,7 +20,6 @@ class ContactController(
         @RequestParam("email") email: String,
         @RequestParam("phone", required = false) phone: String?,
         @RequestParam("picture", required = false) picture: MultipartFile?
-        @RequestParam("isFavourite", required = false, defaultValue = "false") isFavourite: Boolean
     ): ResponseEntity<Contact> {
         if (name.isBlank()) {
             return ResponseEntity(HttpStatus.BAD_REQUEST)
@@ -33,7 +32,6 @@ class ContactController(
             this.name = name
             this.email = email
             this.phone = phone
-            this.isFavourite = isFavourite
         }
         val createdContact = contactService.createContact(contact, picture)
         return ResponseEntity(createdContact, HttpStatus.CREATED)
@@ -59,7 +57,6 @@ class ContactController(
         @RequestParam("email") email: String,
         @RequestParam("phone", required = false) phone: String?,
         @RequestParam("picture", required = false) picture: MultipartFile?
-        @RequestParam("isFavourite", required = false) isFavourite: Boolean?
     ): ResponseEntity<Contact> {
         if (name.isBlank()) {
             return ResponseEntity(HttpStatus.BAD_REQUEST)
@@ -73,7 +70,6 @@ class ContactController(
                 this.name = name
                 this.email = email
                 this.phone = phone
-                this.isFavourite = isFavourite ?: false
             }
             val updatedContact = contactService.updateContact(id, contact, picture)
             ResponseEntity(updatedContact, HttpStatus.OK)
